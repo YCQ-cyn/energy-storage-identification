@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 原始数据与中间数据
+*.xlsx
+*.xls
+*.csv
+*.npz
+*.npy
+*.parquet
+*.feather
+*.h5
+*.hdf5
+data/
+datasets/
+TCN/adding_problem/data_split/
+TCN/adding_problem/step_3/
+
+# 训练、诊断与实验输出
+*.log
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.html.tmp
+TCN/adding_problem/diag_step*/
+TCN/adding_problem/teacher_constraint_review/
+TCN/adding_problem/gan_offline_candidates*/
+TCN/adding_problem/storage_web/build/
+TCN/adding_problem/storage_web/work/
+
+# 默认忽略新生成的权重，仅保留发布权重
+*.pt
+*.pth
+!TCN/adding_problem/step_1/best_model_st1.pt
+!TCN/adding_problem/step_2/best_model_st2.pt
+!TCN/adding_problem/train_student/best_model_student.pt
+
+# 默认忽略阶段目录中的新产物
+TCN/adding_problem/step_1/*
+!TCN/adding_problem/step_1/best_model_st1.pt
+TCN/adding_problem/step_2/*
+!TCN/adding_problem/step_2/best_model_st2.pt
+TCN/adding_problem/train_student/*
+!TCN/adding_problem/train_student/best_model_student.pt

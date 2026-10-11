@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户侧储能智能辅助排查服务</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page-shell">
+    <header class="hero">
+        <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" role="img">
+                <path d="M15 7h18v6H15zM11 15h26v25H11z"/>
+                <path class="bolt" d="M26 18 18 29h6l-2 9 9-13h-6z"/>
+            </svg>
+        </div>
+        <div>
+            <p class="eyebrow">营销运维 · 智能辅助排查</p>
+            <h1>《用户侧储能智能辅助排查服务》</h1>
+            <p class="hero-copy">上传用户日负荷曲线，结合当前电价政策，生成用户级储能行为排查结果。</p>
+        </div>
+        <div class="service-state"><span></span>本地安全运行</div>
+    </header>
+
+    <main>
+        <section class="workflow-card">
+            <div class="section-heading">
+                <div>
+                    <span class="step-kicker">数据分析</span>
+                    <h2>创建排查任务</h2>
+                </div>
+                <p>文件仅在本机处理，不上传外部网络</p>
+            </div>
+
+            <div class="workflow-grid">
+                <div class="control-block upload-block">
+                    <div class="control-title">
+                        <span class="step-number">1</span>
+                        <div>
+                            <h3>上传用电数据</h3>
+                            <p>支持 XLSX 或 CSV，单文件不超过 512MB</p>
+                        </div>
+                    </div>
+                    <button class="drop-zone" id="dropZone" type="button">
+                        <input id="fileInput" type="file" accept=".xlsx,.csv" hidden>
+                        <span class="upload-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>
+                            </svg>
+                        </span>
+                        <strong>点击选择或拖拽文件到这里</strong>
+                        <small>系统会自动识别常见日期、户号和96点负荷列格式</small>
+                    </button>
+                    <div class="selected-file" id="selectedFile" hidden>
+                        <span class="file-badge">XLS</span>
+                        <div>
+                            <strong id="fileName"></strong>
+                            <small id="fileSize"></small>
+                        </div>
+                        <button id="removeFile" type="button" aria-label="移除文件">×</button>
+                    </div>
+                </div>
+
+                <div class="control-block policy-block">
+                    <div class="control-title">
+                        <span class="step-number">2</span>
+                        <div>
+                            <h3>选择当前电价政策</h3>
+                            <p>根据数据日期月份自动匹配峰、平、谷时段</p>
+                        </div>
+                    </div>
+                    <div class="policy-options">
+                        <label class="policy-option">
+                            <input type="radio" name="policy" value="new" checked>
+                            <span class="radio-dot"></span>
+                            <span>
+                                <strong>当前政策</strong>
+                                <small>新分时电价政策，适用于当前排查数据</small>
+                            </span>
+                            <em>推荐</em>
+                        </label>
+                        <label class="policy-option">
+                            <input type="radio" name="policy" value="old">
+                            <span class="radio-dot"></span>
+                            <span>
+                                <strong>原电价政策</strong>
+                                <small>用于历史政策期间数据复核</small>
+                            </span>
+                        </label>
+                    </div>
+                    <div class="policy-note">
+                        模型使用相对电价角色，不使用具体电价金额。
+                    </div>
+                </div>
+            </div>
+
+            <div class="format-panel">
+                <div class="format-label">
+                    <strong>建议格式</strong>
+                    <span>日期建议使用 YYYY-MM-DD；其他常见日期格式可自动识别</span>
+                </div>
+                <div class="format-line" id="formatLine" tabindex="0"></div>
+            </div>
+
+            <div class="action-row">
+                <div class="status-message" id="statusMessage" role="status">
+                    <span class="status-dot"></span>
+                    请选择待排查文件
+                </div>
+                <button class="primary-button" id="analyzeButton" type="button" disabled>
+                    <span class="button-text">开始智能排查</span>
+                    <span class="button-loader" aria-hidden="true"></span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m9 18 6-6-6-6"/>
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <section class="result-card">
+            <div class="result-heading">
+                <div>
+                    <span class="step-kicker">分析结果</span>
+                    <h2>用户排查结果预览</h2>
+                    <p id="resultSummary">完成分析后，可在此预览并下载Excel结果。</p>
+                </div>
+                <div class="result-actions">
+                    <form class="search-box" id="searchBox" role="search" hidden>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>
+                        </svg>
+                        <input id="searchInput" type="search" aria-label="按户号搜索" placeholder="输入部分户号">
+                        <button class="search-button" id="searchButton" type="submit">搜索</button>
+                    </form>
+                    <a class="download-button" id="downloadButton" href="#" hidden>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14"/>
+                        </svg>
+                        下载Excel
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-wrap" id="tableWrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>户号</th>
+                        <th>储能情况</th>
+                        <th>总天数</th>
+                        <th>有效天数</th>
+                    </tr>
+                    </thead>
+                    <tbody id="resultBody"></tbody>
+                </table>
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-graphic" aria-hidden="true">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <strong id="emptyStateTitle">暂无排查结果</strong>
+                    <p id="emptyStateMessage">上传符合建议格式的文件并开始分析</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <span>用户侧储能智能辅助排查服务</span>
+        <span>结果为储能行为证据分级，供辅助排查使用</span>
+    </footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
