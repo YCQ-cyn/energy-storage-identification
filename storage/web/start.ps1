@@ -9,7 +9,7 @@ $Host.UI.RawUI.WindowTitle = "Storage Screening Service"
 
 $webRoot = $PSScriptRoot
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $webRoot ".."))
-$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot "..\.."))
+$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot ".."))
 $sourceFile = Join-Path $webRoot "src\StorageScreeningApplication.java"
 $buildRoot = Join-Path $webRoot "build"
 $classFile = Join-Path $buildRoot "StorageScreeningApplication.class"
@@ -95,7 +95,7 @@ try {
 
     foreach ($requiredPath in @(
         $sourceFile,
-        (Join-Path $projectRoot "add_test_infer.py"),
+        (Join-Path $projectRoot "infer.py"),
         (Join-Path $projectRoot "train_student\best_model_student.pt"),
         (Join-Path $webRoot "static\index.html")
     )) {
@@ -107,11 +107,11 @@ try {
     $java = Resolve-Executable "java"
     $javac = Resolve-Executable "javac"
     if ($null -eq $java -or $null -eq $javac) {
-        throw "JDK was not found. Install JDK 17 or newer and add java and javac to PATH."
+        throw "Java Development Kit was not found. Install Java Development Kit 17 or newer and add java and javac to PATH."
     }
     $javaMajor = Get-JavaMajorVersion $javac
     if ($javaMajor -lt 17) {
-        throw "JDK $javaMajor is too old. JDK 17 or newer is required."
+        throw "Java Development Kit $javaMajor is too old. Java Development Kit 17 or newer is required."
     }
 
     $pythonCandidates = @(
@@ -154,7 +154,7 @@ try {
         Remove-Item -LiteralPath $errorLog -Force
     }
     Write-Host "[2/2] Starting the storage screening service..."
-    Write-Host "[JDK] $javaMajor"
+    Write-Host "[Java Development Kit] $javaMajor"
     Write-Host "[Python] $python"
     Write-Host "[URL] $address"
     Write-Host "Close this window to stop the service." -ForegroundColor Cyan

@@ -14,33 +14,33 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 try:
-    from TCN.adding_problem.teacher_targets import (
+    from storage.targets import (
         BEHAVIOR_TARGET_NAMES,
         PHYSICAL_TARGET_NAMES,
         RESPONSE_TARGET_NAMES,
         TeacherTargetConfig,
         compute_stage2_targets,
     )
-    from TCN.adding_problem.utils import load_storage_data
+    from storage.data import load_storage_data
 except ImportError:
     try:
-        from .teacher_targets import (
+        from .targets import (
             BEHAVIOR_TARGET_NAMES,
             PHYSICAL_TARGET_NAMES,
             RESPONSE_TARGET_NAMES,
             TeacherTargetConfig,
             compute_stage2_targets,
         )
-        from .utils import load_storage_data
+        from .data import load_storage_data
     except ImportError:
-        from teacher_targets import (
+        from targets import (
             BEHAVIOR_TARGET_NAMES,
             PHYSICAL_TARGET_NAMES,
             RESPONSE_TARGET_NAMES,
             TeacherTargetConfig,
             compute_stage2_targets,
         )
-        from utils import load_storage_data
+        from data import load_storage_data
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -161,10 +161,10 @@ def plot_sample(output_path, sample_index, meta_row, p_raw, q_raw, role_seq, tar
     for axis in axes[:3]:
         shade_price_roles(axis, role_seq)
 
-    axes[0].plot(hours, p_raw, color="#111827", linewidth=1.8, label="原始 P")
-    axes[0].plot(hours, background, color="#6b7280", linewidth=1.1, alpha=0.8, label="B=P-Q")
-    axes[0].plot(hours, background_smooth, color="#16a34a", linewidth=1.4, label="平滑背景 B")
-    axes[0].plot(hours, response_center, color="#2563eb", linewidth=1.2, linestyle="--", label="期望 P=B平滑+Q")
+    axes[0].plot(hours, p_raw, color="#111827", linewidth=1.8, label="原始用户有功功率")
+    axes[0].plot(hours, background, color="#6b7280", linewidth=1.1, alpha=0.8, label="去储能背景（用户有功功率减储能充放电功率）")
+    axes[0].plot(hours, background_smooth, color="#16a34a", linewidth=1.4, label="平滑基础负荷背景")
+    axes[0].plot(hours, response_center, color="#2563eb", linewidth=1.2, linestyle="--", label="期望有功功率（平滑背景加储能充放电功率）")
     axes[0].fill_between(
         hours,
         pointwise["response_band_lower_raw"],
@@ -173,7 +173,7 @@ def plot_sample(output_path, sample_index, meta_row, p_raw, q_raw, role_seq, tar
         interpolate=True,
         color="#ef4444",
         alpha=0.20,
-        label="P 响应带",
+        label="用户有功功率响应带",
     )
     axes[0].plot(
         hours,
@@ -188,7 +188,7 @@ def plot_sample(output_path, sample_index, meta_row, p_raw, q_raw, role_seq, tar
         linewidth=0.8,
     )
     axes[0].set_ylabel("功率原始值")
-    axes[0].set_title("总负荷、去储能背景与 P 响应带")
+    axes[0].set_title("总负荷、去储能背景与用户有功功率响应带")
     axes[0].legend(loc="upper right", ncol=3)
 
     axes[1].fill_between(
@@ -199,7 +199,7 @@ def plot_sample(output_path, sample_index, meta_row, p_raw, q_raw, role_seq, tar
         interpolate=True,
         color="#ef4444",
         alpha=0.24,
-        label="Q ± 局部噪声",
+        label="储能充放电功率 ± 局部噪声",
     )
     axes[1].plot(
         hours,
@@ -213,15 +213,15 @@ def plot_sample(output_path, sample_index, meta_row, p_raw, q_raw, role_seq, tar
         color="#dc2626",
         linewidth=0.8,
     )
-    axes[1].plot(hours, q_aligned, color="#1d4ed8", linewidth=1.8, label="对齐后的 Q")
-    axes[1].plot(hours, observed_response, color="#111827", linewidth=1.5, label="P-B平滑（实际响应）")
+    axes[1].plot(hours, q_aligned, color="#1d4ed8", linewidth=1.8, label="对齐后的储能充放电功率")
+    axes[1].plot(hours, observed_response, color="#111827", linewidth=1.5, label="用户有功功率减平滑背景（实际响应）")
     axes[1].axhline(0.0, color="#374151", linewidth=0.8)
     axes[1].set_ylabel("储能响应原始值")
-    axes[1].set_title("实际响应带：黑线落入红色带表示 Q 在 P 中可解释")
+    axes[1].set_title("实际响应带：黑线落入红色带表示储能充放电功率在用户有功功率中可解释")
     axes[1].legend(loc="upper right", ncol=3)
 
-    axes[2].plot(hours, pointwise["point_alignment"], linewidth=1.5, label="P/Q 点响应")
-    axes[2].plot(hours, pointwise["point_run_score"], linewidth=1.2, label="Q 段长度结构")
+    axes[2].plot(hours, pointwise["point_alignment"], linewidth=1.5, label="用户有功功率与储能充放电功率点响应")
+    axes[2].plot(hours, pointwise["point_run_score"], linewidth=1.2, label="储能充放电功率段长度结构")
     axes[2].plot(hours, pointwise["segment_edge_support"], linewidth=1.2, label="成对边界支持")
     axes[2].plot(hours, pointwise["point_behavior_evidence"], linewidth=1.5, label="政策行为证据")
     boundary_mask = pointwise["point_edge_score"] > 0.0
@@ -312,7 +312,7 @@ def point_rows(sample_index, role_seq, p_raw, q_raw, pointwise):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="可视化 Stage-2 教师约束和真实 P/Q 响应带")
+    parser = argparse.ArgumentParser(description="可视化 Stage-2 教师约束和真实用户有功功率与储能充放电功率响应带")
     parser.add_argument("--data_path", type=str, default="processed_result.xlsx")
     parser.add_argument("--split_manifest", type=str, default="data_split/user_split.csv")
     parser.add_argument("--user_col", type=str, default="关联用户号")
@@ -410,7 +410,7 @@ def main():
     )
     print(f"[Done] 输出目录: {output_dir}")
     print(f"[Done] 样本索引: {selected.tolist()}")
-    print("[Note] 响应带中心为 Q，对应到 P 上是平滑背景+Q；半宽来自局部背景噪声。")
+    print("[Note] 响应带中心为储能充放电功率，对应到用户有功功率上是平滑背景加储能充放电功率；半宽来自局部背景噪声。")
 
 
 if __name__ == "__main__":

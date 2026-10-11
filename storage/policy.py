@@ -5,16 +5,16 @@ from pathlib import Path
 import numpy as np
 
 try:
-    from TCN.adding_problem.utils import (
+    from storage.data import (
         build_price_features,
         build_price_jump_seq,
         scale_pq,
     )
 except ImportError:
     try:
-        from .utils import build_price_features, build_price_jump_seq, scale_pq
+        from .data import build_price_features, build_price_jump_seq, scale_pq
     except ImportError:
-        from utils import build_price_features, build_price_jump_seq, scale_pq
+        from data import build_price_features, build_price_jump_seq, scale_pq
 
 
 POLICY_TRANSFER_VERSION = "policy-relocation-v3-exposure-normalized"

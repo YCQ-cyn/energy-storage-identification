@@ -7,6 +7,12 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+secrets.json
 
 # IDE / OS
 .idea/
@@ -26,8 +32,8 @@ Thumbs.db
 *.hdf5
 data/
 datasets/
-TCN/adding_problem/data_split/
-TCN/adding_problem/step_3/
+storage/data_split/
+storage/step_3/
 
 # 训练、诊断与实验输出
 *.log
@@ -36,23 +42,23 @@ TCN/adding_problem/step_3/
 *.jpeg
 *.svg
 *.html.tmp
-TCN/adding_problem/diag_step*/
-TCN/adding_problem/teacher_constraint_review/
-TCN/adding_problem/gan_offline_candidates*/
-TCN/adding_problem/storage_web/build/
-TCN/adding_problem/storage_web/work/
+storage/diag_step*/
+storage/teacher_constraint_review/
+storage/gan_offline_candidates*/
+storage/web/build/
+storage/web/work/
 
 # 默认忽略新生成的权重，仅保留发布权重
 *.pt
 *.pth
-!TCN/adding_problem/step_1/best_model_st1.pt
-!TCN/adding_problem/step_2/best_model_st2.pt
-!TCN/adding_problem/train_student/best_model_student.pt
+!storage/step_1/best_model_st1.pt
+!storage/step_2/best_model_st2.pt
+!storage/train_student/best_model_student.pt
 
 # 默认忽略阶段目录中的新产物
-TCN/adding_problem/step_1/*
-!TCN/adding_problem/step_1/best_model_st1.pt
-TCN/adding_problem/step_2/*
-!TCN/adding_problem/step_2/best_model_st2.pt
-TCN/adding_problem/train_student/*
-!TCN/adding_problem/train_student/best_model_student.pt
+storage/step_1/*
+!storage/step_1/best_model_st1.pt
+storage/step_2/*
+!storage/step_2/best_model_st2.pt
+storage/train_student/*
+!storage/train_student/best_model_student.pt

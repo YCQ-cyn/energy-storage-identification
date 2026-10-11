@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""生成离线 GAN 弱储能候选数据，不接入正式训练。"""
+"""生成离线生成对抗网络弱储能候选数据，不接入正式训练。"""
 
 import argparse
 import json
@@ -12,7 +12,7 @@ import torch.nn as nn
 from PIL import Image, ImageDraw
 
 try:
-    from .teacher_targets import (
+    from .targets import (
         BEHAVIOR_TARGET_NAMES,
         PHYSICAL_TARGET_NAMES,
         RESPONSE_TARGET_NAMES,
@@ -20,9 +20,9 @@ try:
         TeacherTargetConfig,
         compute_stage2_targets,
     )
-    from .utils import load_storage_data, scale_pq
+    from .data import load_storage_data, scale_pq
 except ImportError:
-    from teacher_targets import (
+    from targets import (
         BEHAVIOR_TARGET_NAMES,
         PHYSICAL_TARGET_NAMES,
         RESPONSE_TARGET_NAMES,
@@ -30,7 +30,7 @@ except ImportError:
         TeacherTargetConfig,
         compute_stage2_targets,
     )
-    from utils import load_storage_data, scale_pq
+    from data import load_storage_data, scale_pq
 
 
 GAN_CANDIDATE_VERSION = "physics-guided-residual-wgan-gp-v1"
@@ -166,7 +166,7 @@ def train_wgan(residuals, args, device):
         }
         history.append(row)
         print(
-            f"[GAN] epoch={epoch:02d} critic={row['critic_loss']:.4f} "
+            f"[Generative adversarial network] epoch={epoch:02d} critic={row['critic_loss']:.4f} "
             f"generator={row['generator_loss']:.4f}"
         )
     return generator.eval(), history
@@ -430,7 +430,7 @@ def save_plot(path, arrays, seed):
         draw.text(
             (left, row_index * row_height + 8),
             f"candidate={sample_index}  alpha={arrays['alpha'][sample_index]:.2f}  "
-            "blue=P  red=Q",
+            "blue=Customer active power  red=Storage charging and discharging power",
             fill=(20, 20, 20),
         )
     image.save(path)
@@ -438,7 +438,7 @@ def save_plot(path, arrays, seed):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="生成物理约束的离线 GAN 弱储能候选数据"
+        description="生成物理约束的离线生成对抗网络弱储能候选数据"
     )
     parser.add_argument("--data_path", default="processed_result.xlsx")
     parser.add_argument("--split_manifest", default="data_split/user_split.csv")
@@ -544,7 +544,7 @@ def main():
         "connected_to_formal_training": False,
         "validation_test_augmented": False,
         "method": (
-            "WGAN-GP生成基础负荷残差，真实Q按alpha弱化后进行物理组合，"
+            "带梯度惩罚的瓦瑟斯坦生成对抗网络生成基础负荷残差，真实储能充放电功率按衰减系数弱化后进行物理组合，"
             "再使用Stage-2行为目标筛选"
         ),
         "target_pipeline_version": TARGET_PIPELINE_VERSION,

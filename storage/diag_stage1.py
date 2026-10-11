@@ -3,25 +3,25 @@
 Stage-1 comprehensive diagnostics for the storage-response project (Ridge-stable revision).
 
 This script is designed for the current Stage-1 pipeline:
-  P/Q -> TCN-LSTM backbone H -> projection head Z
+  User active power and storage charge/discharge power -> temporal convolution and long short-term memory backbone -> projection head
   clean-pq-v3-shared-p-scale
 
 It does NOT retrain or modify the checkpoint. It audits:
   1) checkpoint/data/split/normalization consistency;
   2) train/val/test representation health for H and Z;
   3) augmentation invariance and positive/negative distance distributions;
-  4) P/Q channel usage (zero/permutation ablations);
+  4) customer active power and storage charging and discharging power channel usage (zero/permutation ablations);
   5) train-fitted PCA applied to train/val/test in the same coordinate system;
   6) user-identity concentration in H;
   7) physical linear probes on unseen validation users;
   8) optional full-curve linear reconstruction probe;
-  9) clipping rates and shared-P-scale normalization diagnostics;
+  9) clipping rates and shared customer-active-power scale normalization diagnostics;
  10) a machine-readable acceptance report and a Chinese summary report.
 
-Recommended usage (run from TCN/adding_problem):
-  python diag_st1.py --ckpt step_1/best_model_st1.pt --cuda
+Recommended usage (run from storage):
+  python diag_stage1.py --ckpt step_1/best_model_st1.pt --cuda
 
-The script imports the project's current add_test_st1.py and utils.py.
+The script imports the project's current stage1.py and data.py.
 """
 
 from __future__ import annotations
@@ -58,32 +58,32 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_PARENT = SCRIPT_DIR.parents[1] if len(SCRIPT_DIR.parents) >= 2 else SCRIPT_DIR
+PROJECT_PARENT = SCRIPT_DIR.parent
 for candidate in (SCRIPT_DIR, PROJECT_PARENT):
     if str(candidate) not in sys.path:
         sys.path.insert(0, str(candidate))
 
 try:
-    from add_test_st1 import (
+    from stage1 import (
         AugmentConfig,
         EncoderWithHead,
         apply_sync_intensity_to_x,
         set_seed,
     )
-    from utils import (
+    from data import (
         DATA_PIPELINE_VERSION,
         P_CLIP_MAX,
         Q_CLIP_ABS,
         load_storage_data,
     )
 except ImportError:
-    from TCN.adding_problem.add_test_st1 import (
+    from storage.stage1 import (
         AugmentConfig,
         EncoderWithHead,
         apply_sync_intensity_to_x,
         set_seed,
     )
-    from TCN.adding_problem.utils import (
+    from storage.data import (
         DATA_PIPELINE_VERSION,
         P_CLIP_MAX,
         Q_CLIP_ABS,
@@ -1319,7 +1319,7 @@ def render_summary_markdown(report: Mapping[str, Any], acceptance: Mapping[str, 
         f"- numerical warning count: {probe.get('numerical_warning_count', 0)}",
         f"- numerically stable: {probe.get('numerically_stable', False)}",
         "",
-        "| 目标 | trained H | random H | raw normalized P/Q |",
+        "| 目标 | trained H | random H | 归一化用户有功功率与储能充放电功率 |",
         "|---|---:|---:|---:|",
     ]
     for target in probe["composite_targets"]:
@@ -1334,15 +1334,15 @@ def render_summary_markdown(report: Mapping[str, Any], acceptance: Mapping[str, 
         "## 归一化与裁剪",
         "",
         f"- q_global_scale: {report['clipping']['normalization'].get('q_global_scale')}",
-        f"- train P/Q point clip rate: {clipping['train']['p_point_clip_rate']:.6f} / {clipping['train']['q_point_clip_rate']:.6f}",
-        f"- val P/Q point clip rate: {clipping['val']['p_point_clip_rate']:.6f} / {clipping['val']['q_point_clip_rate']:.6f}",
+        f"- 训练用户有功功率与储能充放电功率点裁剪率: {clipping['train']['p_point_clip_rate']:.6f} / {clipping['train']['q_point_clip_rate']:.6f}",
+        f"- 验证用户有功功率与储能充放电功率点裁剪率: {clipping['val']['p_point_clip_rate']:.6f} / {clipping['val']['q_point_clip_rate']:.6f}",
         "",
         "## 通道使用",
         "",
-        f"- zero P -> H relative change: {channel['zero_P']['h_rel_mean']:.4f}",
-        f"- zero Q -> H relative change: {channel['zero_Q']['h_rel_mean']:.4f}",
-        f"- permute P -> H relative change: {channel['permute_P']['h_rel_mean']:.4f}",
-        f"- permute Q -> H relative change: {channel['permute_Q']['h_rel_mean']:.4f}",
+        f"- zero customer active power -> representation relative change: {channel['zero_P']['h_rel_mean']:.4f}",
+        f"- zero storage charging and discharging power -> representation relative change: {channel['zero_Q']['h_rel_mean']:.4f}",
+        f"- permute customer active power -> representation relative change: {channel['permute_P']['h_rel_mean']:.4f}",
+        f"- permute storage charging and discharging power -> representation relative change: {channel['permute_Q']['h_rel_mean']:.4f}",
         "",
         "## 用户聚集",
         "",

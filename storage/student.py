@@ -14,23 +14,23 @@ import torch.nn.functional as F
 from sklearn.metrics import mean_absolute_error, roc_auc_score
 
 try:
-    from . import add_test_st2 as st2
-    from .add_test_st3 import (
+    from . import teacher as st2
+    from .distill import (
         STUDENT_CHANNEL_NAMES,
         STUDENT_DATASET_VERSION,
         STUDENT_TARGET_NAMES,
     )
-    from .model import DEFAULT_TCN_LEVELS, TCN_LSTM, TCN_LSTM_ARCH_VERSION
-    from .teacher_targets import TARGET_PIPELINE_VERSION
+    from .model import DEFAULT_TEMPORAL_LEVELS, TemporalSequenceModel, MODEL_ARCH_VERSION
+    from .targets import TARGET_PIPELINE_VERSION
 except ImportError:
-    import add_test_st2 as st2
-    from add_test_st3 import (
+    import teacher as st2
+    from distill import (
         STUDENT_CHANNEL_NAMES,
         STUDENT_DATASET_VERSION,
         STUDENT_TARGET_NAMES,
     )
-    from model import DEFAULT_TCN_LEVELS, TCN_LSTM, TCN_LSTM_ARCH_VERSION
-    from teacher_targets import TARGET_PIPELINE_VERSION
+    from model import DEFAULT_TEMPORAL_LEVELS, TemporalSequenceModel, MODEL_ARCH_VERSION
+    from targets import TARGET_PIPELINE_VERSION
 
 
 STUDENT_OBJECTIVE_VERSION = "student-generalized-distill-v2-structured"
@@ -39,12 +39,12 @@ SPLIT_NAMES = {0: "train", 1: "val", 2: "test"}
 
 
 class StudentModel(nn.Module):
-    def __init__(self, input_channels=5, nhid=64, levels=DEFAULT_TCN_LEVELS,
+    def __init__(self, input_channels=5, nhid=64, levels=DEFAULT_TEMPORAL_LEVELS,
                  ksize=7, dropout=0.1, lstm_hidden=64, lstm_layers=1,
                  embedding_dim=64):
         super().__init__()
         self.input_channels = int(input_channels)
-        self.backbone = TCN_LSTM(
+        self.backbone = TemporalSequenceModel(
             input_channels=input_channels,
             num_channels=[nhid] * levels,
             kernel_size=ksize,
@@ -108,7 +108,7 @@ def load_student_arrays(path):
         dataset_version is None
         or str(dataset_version.item()) != STUDENT_DATASET_VERSION
     ):
-        raise RuntimeError("学生数据版本不匹配，请重新运行 add_test_st3.py")
+        raise RuntimeError("学生数据版本不匹配，请重新运行 distill.py")
     required = {
         "positive_inputs",
         "pseudo_inputs",
@@ -152,17 +152,17 @@ def validate_dataset_teacher(arrays, checkpoint, checkpoint_path):
     if dataset_epoch != checkpoint_epoch:
         raise RuntimeError(
             f"学生数据来自教师 epoch={dataset_epoch}，当前教师为 epoch={checkpoint_epoch}；"
-            "请重新运行 add_test_st3.py"
+            "请重新运行 distill.py"
         )
     dataset_sha256 = str(arrays["teacher_checkpoint_sha256"].item())
     checkpoint_sha256 = file_sha256(checkpoint_path)
     if dataset_sha256 != checkpoint_sha256:
-        raise RuntimeError("学生数据与当前 Stage-2 权重不一致，请重新运行 add_test_st3.py")
+        raise RuntimeError("学生数据与当前 Stage-2 权重不一致，请重新运行 distill.py")
     if checkpoint.get("target_pipeline_version") != TARGET_PIPELINE_VERSION:
         raise RuntimeError("Stage-2 checkpoint 目标版本不匹配")
     if checkpoint.get("stage2_objective_version") != st2.STAGE2_OBJECTIVE_VERSION:
         raise RuntimeError("Stage-2 checkpoint 训练目标版本不匹配")
-    if checkpoint.get("model_arch_version") != TCN_LSTM_ARCH_VERSION:
+    if checkpoint.get("model_arch_version") != MODEL_ARCH_VERSION:
         raise RuntimeError("Stage-2 checkpoint 网络结构版本不匹配")
 
 
@@ -184,7 +184,7 @@ def inherit_teacher_backbone(model, checkpoint):
         raise RuntimeError("Stage-2 checkpoint 目标版本不匹配")
     if checkpoint.get("stage2_objective_version") != st2.STAGE2_OBJECTIVE_VERSION:
         raise RuntimeError("Stage-2 checkpoint 训练目标版本不匹配")
-    if checkpoint.get("model_arch_version") != TCN_LSTM_ARCH_VERSION:
+    if checkpoint.get("model_arch_version") != MODEL_ARCH_VERSION:
         raise RuntimeError("Stage-2 checkpoint 网络结构版本不匹配")
     teacher_kwargs = checkpoint.get("model_kwargs")
     if not teacher_kwargs:
@@ -852,7 +852,7 @@ def save_checkpoint(path, model, args, model_kwargs, epoch, metrics, arrays,
     checkpoint = {
         "student_objective_version": STUDENT_OBJECTIVE_VERSION,
         "student_dataset_version": STUDENT_DATASET_VERSION,
-        "model_arch_version": TCN_LSTM_ARCH_VERSION,
+        "model_arch_version": MODEL_ARCH_VERSION,
         "model_state_dict": model.state_dict(),
         "model_kwargs": model_kwargs,
         "epoch": int(epoch),
@@ -922,7 +922,7 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--eval_batch_size", type=int, default=512)
     parser.add_argument("--nhid", type=int, default=64)
-    parser.add_argument("--levels", type=int, default=DEFAULT_TCN_LEVELS)
+    parser.add_argument("--levels", type=int, default=DEFAULT_TEMPORAL_LEVELS)
     parser.add_argument("--ksize", type=int, default=7)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--lstm_hidden", type=int, default=64)

@@ -42,8 +42,8 @@ public final class StorageScreeningApplication {
     private StorageScreeningApplication(
             Path projectRoot, String pythonExecutable, int port) {
         this.projectRoot = projectRoot.toAbsolutePath().normalize();
-        this.staticRoot = this.projectRoot.resolve("storage_web/static");
-        this.workRoot = this.projectRoot.resolve("storage_web/work");
+        this.staticRoot = this.projectRoot.resolve("web/static");
+        this.workRoot = this.projectRoot.resolve("web/work");
         this.pythonExecutable = pythonExecutable;
         this.port = port;
     }
@@ -78,8 +78,8 @@ public final class StorageScreeningApplication {
     }
 
     private void validateRuntime() throws IOException {
-        if (!Files.isRegularFile(projectRoot.resolve("add_test_infer.py"))) {
-            throw new IOException("未找到 add_test_infer.py：" + projectRoot);
+        if (!Files.isRegularFile(projectRoot.resolve("infer.py"))) {
+            throw new IOException("未找到 infer.py：" + projectRoot);
         }
         if (!Files.isRegularFile(
                 projectRoot.resolve("train_student/best_model_student.pt"))) {
@@ -177,7 +177,7 @@ public final class StorageScreeningApplication {
             String policy) throws IOException, InterruptedException {
         ProcessBuilder builder = new ProcessBuilder(
                 pythonExecutable,
-                projectRoot.resolve("add_test_infer.py").toString(),
+                projectRoot.resolve("infer.py").toString(),
                 "--input_path", inputPath.toString(),
                 "--output_path", resultPath.toString(),
                 "--policy_name", policy,

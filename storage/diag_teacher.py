@@ -2,9 +2,9 @@
 Stage-2 教师模型完整诊断（增强版）
 
 适配：
-- add_test_st2.py 中的 teacher-multitask-v2-floor-cov-policy-calibrated
-- teacher_targets.py 中的 teacher-storage-behavior-v5-pq-visible-role-normalized
-- policy_transfer.py 中的 policy-relocation-v3-exposure-normalized
+- teacher.py 中的 teacher-multitask-v2-floor-cov-policy-calibrated
+- targets.py 中的 teacher-storage-behavior-v5-pq-visible-role-normalized
+- policy.py 中的 policy-relocation-v3-exposure-normalized
 
 主要输出：
 1. diagnostics_full.json / diagnostics_summary.md
@@ -56,13 +56,13 @@ except Exception:
     SKLEARN_AVAILABLE = False
 
 try:
-    from TCN.adding_problem import add_test_st2 as st2
-    from TCN.adding_problem.policy_transfer import (
+    from storage import teacher as st2
+    from storage.policy import (
         POLICY_TRANSFER_VERSION,
         PolicyTransferConfig,
         build_policy_transfer_cache,
     )
-    from TCN.adding_problem.teacher_targets import (
+    from storage.targets import (
         BEHAVIOR_TARGET_NAMES,
         PHYSICAL_TARGET_NAMES,
         RESPONSE_TARGET_NAMES,
@@ -71,15 +71,15 @@ try:
         build_stage2_target_cache,
         compute_stage2_targets,
     )
-    from TCN.adding_problem.utils import load_storage_data
+    from storage.data import load_storage_data
 except ImportError:
-    import add_test_st2 as st2
-    from policy_transfer import (
+    import teacher as st2
+    from policy import (
         POLICY_TRANSFER_VERSION,
         PolicyTransferConfig,
         build_policy_transfer_cache,
     )
-    from teacher_targets import (
+    from targets import (
         BEHAVIOR_TARGET_NAMES,
         PHYSICAL_TARGET_NAMES,
         RESPONSE_TARGET_NAMES,
@@ -88,7 +88,7 @@ except ImportError:
         build_stage2_target_cache,
         compute_stage2_targets,
     )
-    from utils import load_storage_data
+    from data import load_storage_data
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -475,7 +475,7 @@ def load_model(checkpoint_path: Path, device: torch.device):
         model_kwargs = {
             "input_channels": 5,
             "nhid": int(saved_args.get("nhid", 64)),
-            "levels": int(saved_args.get("levels", st2.DEFAULT_TCN_LEVELS)),
+            "levels": int(saved_args.get("levels", st2.DEFAULT_TEMPORAL_LEVELS)),
             "ksize": int(saved_args.get("ksize", 7)),
             "dropout": float(saved_args.get("dropout", 0.2)),
             "lstm_hidden": int(saved_args.get("lstm_hidden", 64)),
@@ -552,7 +552,7 @@ def validate_integrity(
         checkpoint.get("stage2_objective_version"),
         st2.STAGE2_OBJECTIVE_VERSION,
     )
-    expected_arch = getattr(st2, "TCN_LSTM_ARCH_VERSION", None)
+    expected_arch = getattr(st2, "MODEL_ARCH_VERSION", None)
     if expected_arch is not None:
         record(
             "model_arch_version",
@@ -1428,7 +1428,7 @@ def run_p_only_probe(
 
     result: Dict[str, Any] = {
         "status": "OK",
-        "purpose": "检查 P 与相对电价角色是否包含可供 Student 蒸馏的信号；不代表现实负类概率校准",
+        "purpose": "检查用户有功功率与相对电价角色是否包含可供 Student 蒸馏的信号；不代表现实负类概率校准",
         "train_split": "train users; prefer policy_shift=0",
         "train_samples": int(len(train_candidates)),
         "eval": {},
@@ -1949,10 +1949,10 @@ def evaluate_verdict(
         storage_probe = teacher_reg.get("behavior.storage_behavior", {})
         if storage_probe and float(storage_probe.get("corr", 0.0)) < 0.35:
             warnings_list.append(
-                f"P-only 对 Teacher storage_behavior 可蒸馏相关性偏低：{storage_probe.get('corr', 0.0):.3f}"
+                f"仅用户有功功率 对 Teacher storage_behavior 可蒸馏相关性偏低：{storage_probe.get('corr', 0.0):.3f}"
             )
     elif p_only_result:
-        warnings_list.append(f"P-only 探针未完成：{p_only_result.get('reason', 'unknown')}")
+        warnings_list.append(f"仅用户有功功率 探针未完成：{p_only_result.get('reason', 'unknown')}")
 
     reasons = list(dict.fromkeys(reasons))
     warnings_list = list(dict.fromkeys(warnings_list))
@@ -2046,7 +2046,7 @@ def write_markdown_summary(
                 f"{row['user_mean_mae']:.3f} |"
             )
 
-    lines.extend(["", "## P-only 可蒸馏性", ""])
+    lines.extend(["", "## 仅用户有功功率 可蒸馏性", ""])
     if p_only_result.get("status") == "OK":
         for split, result in p_only_result.get("eval", {}).items():
             if result.get("status") != "OK":
@@ -2295,7 +2295,7 @@ def main():
             )
         except Exception as exc:
             p_only_result = {"status": "FAILED", "reason": repr(exc)}
-            integrity_warnings.append(f"P-only 探针失败：{exc}")
+            integrity_warnings.append(f"仅用户有功功率 探针失败：{exc}")
     save_json(output_dir / "p_only_distillability.json", p_only_result)
 
     if not args.skip_plots:

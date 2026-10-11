@@ -11,33 +11,33 @@ import pandas as pd
 import torch
 
 try:
-    from .add_test_st3 import (
+    from .distill import (
         STUDENT_CHANNEL_NAMES,
         STUDENT_DATASET_VERSION,
         STUDENT_TARGET_NAMES,
         build_student_channels,
     )
-    from .add_test_student import (
+    from .student import (
         STUDENT_OBJECTIVE_VERSION,
         StudentModel,
         load_checkpoint,
     )
-    from .model import TCN_LSTM_ARCH_VERSION
-    from .utils import build_price_features, scale_P
+    from .model import MODEL_ARCH_VERSION
+    from .data import build_price_features, scale_P
 except ImportError:
-    from add_test_st3 import (
+    from distill import (
         STUDENT_CHANNEL_NAMES,
         STUDENT_DATASET_VERSION,
         STUDENT_TARGET_NAMES,
         build_student_channels,
     )
-    from add_test_student import (
+    from student import (
         STUDENT_OBJECTIVE_VERSION,
         StudentModel,
         load_checkpoint,
     )
-    from model import TCN_LSTM_ARCH_VERSION
-    from utils import build_price_features, scale_P
+    from model import MODEL_ARCH_VERSION
+    from data import build_price_features, scale_P
 
 
 TIME_COLUMNS = tuple(
@@ -202,7 +202,7 @@ def build_validity(frame, date_column, user_column, power_columns):
         if not valid_date[index]:
             row_reasons.append("数据日期缺失或无法解析")
         if not valid_power[index]:
-            row_reasons.append("96点P存在缺失、非数值或无穷值")
+            row_reasons.append("96点用户有功功率存在缺失、非数值或无穷值")
         reasons.append("；".join(row_reasons))
     return users, dates, power, valid, np.asarray(reasons, dtype=object)
 
@@ -228,7 +228,7 @@ def load_student(path, device):
         raise RuntimeError("学生 checkpoint 训练目标版本不匹配")
     if checkpoint.get("student_dataset_version") != STUDENT_DATASET_VERSION:
         raise RuntimeError("学生 checkpoint 数据版本不匹配")
-    if checkpoint.get("model_arch_version") != TCN_LSTM_ARCH_VERSION:
+    if checkpoint.get("model_arch_version") != MODEL_ARCH_VERSION:
         raise RuntimeError("学生 checkpoint 网络结构版本不匹配")
     if tuple(checkpoint.get("channel_names", ())) != tuple(STUDENT_CHANNEL_NAMES):
         raise RuntimeError("学生 checkpoint 输入通道语义不匹配")
@@ -379,7 +379,7 @@ def write_results(output_path, summary, detail, compact_output=False):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="当前学生模型 P-only 储能证据推理")
+    parser = argparse.ArgumentParser(description="仅使用用户有功功率的学生模型储能证据推理")
     parser.add_argument("--ckpt", default="train_student/best_model_student.pt")
     parser.add_argument("--input_path", default="表格中的非储能.xlsx")
     parser.add_argument("--output_path", default="表格中的非储能 infer.xlsx")

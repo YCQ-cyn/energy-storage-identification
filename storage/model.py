@@ -2,22 +2,22 @@ import torch
 import torch.nn as nn
 
 try:
-    from TCN.tcn import TemporalConvNet
+    from storage.temporal import TemporalConvNet
 except ModuleNotFoundError:
     import sys
     from pathlib import Path
 
-    repository_root = Path(__file__).resolve().parents[2]
+    repository_root = Path(__file__).resolve().parents[1]
     if str(repository_root) not in sys.path:
         sys.path.insert(0, str(repository_root))
-    from TCN.tcn import TemporalConvNet
+    from storage.temporal import TemporalConvNet
 
 
-DEFAULT_TCN_LEVELS = 5
-TCN_LSTM_ARCH_VERSION = "causal-tcn-lstm-multipool-v2"
+DEFAULT_TEMPORAL_LEVELS = 5
+MODEL_ARCH_VERSION = "causal-tcn-lstm-multipool-v2"
 
 
-class TCN_LSTM(nn.Module):
+class TemporalSequenceModel(nn.Module):
     def __init__(self, input_channels, num_channels, kernel_size, dropout,
                  lstm_hidden, lstm_layers, embedding_dim,
                  use_weight_norm=True):

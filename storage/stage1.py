@@ -21,18 +21,18 @@ from sklearn.decomposition import PCA
 from torch.utils.data import DataLoader, Sampler, TensorDataset
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-PROJECT_PARENT = Path(__file__).resolve().parents[2]
+PROJECT_PARENT = Path(__file__).resolve().parents[1]
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_SAVE_DIR = SCRIPT_DIR / "step_1"
 STAGE1_OBJECTIVE_VERSION = "joint-z-vicreg-h-vcreg-v8-batched-augment-equivalent"
 if str(PROJECT_PARENT) not in sys.path:
     sys.path.insert(0, str(PROJECT_PARENT))
-from TCN.adding_problem.model import (
-    DEFAULT_TCN_LEVELS,
-    TCN_LSTM,
-    TCN_LSTM_ARCH_VERSION,
+from storage.model import (
+    DEFAULT_TEMPORAL_LEVELS,
+    TemporalSequenceModel,
+    MODEL_ARCH_VERSION,
 )
-from TCN.adding_problem.utils import (
+from storage.data import (
     augment_sync_intensity,
     augment_sync_intensity_torch,
     load_storage_data,
@@ -206,7 +206,7 @@ class EncoderWithHead(nn.Module):
     def __init__(self, input_channels, nhid, levels, ksize, dropout, lstm_hidden,
                  lstm_layers, embedding_dim, proj_dim=128):
         super().__init__()
-        self.backbone = TCN_LSTM(
+        self.backbone = TemporalSequenceModel(
             input_channels=input_channels,
             num_channels=[nhid] * levels,
             kernel_size=ksize,
@@ -844,7 +844,7 @@ def _plot_embeddings(model, inputs, augment_config, device, save_dir, seed=1111)
 
 def train_stage1(args, device):
     set_seed(args.seed, deterministic=args.deterministic)
-    print("=== Stage-1：P/Q 非对比式时序预训练 ===")
+    print("=== Stage-1：用户有功功率与储能充放电功率非对比式时序预训练 ===")
     print("Args:", args)
 
     train_loader, val_loader, x_train, x_val, data_info = build_dataloaders_st1(
@@ -1005,7 +1005,7 @@ def train_stage1(args, device):
                 "data_info": data_info,
                 "augment_config": asdict(augment_config),
                 "objective_version": STAGE1_OBJECTIVE_VERSION,
-                "model_arch_version": TCN_LSTM_ARCH_VERSION,
+                "model_arch_version": MODEL_ARCH_VERSION,
                 "train_metrics": best_train_metrics,
                 "val_metrics": best_val_metrics,
                 "rank_metrics": best_rank_metrics,
@@ -1037,7 +1037,7 @@ def train_stage1(args, device):
         "data_info": data_info,
         "augment_config": asdict(augment_config),
         "objective_version": STAGE1_OBJECTIVE_VERSION,
-        "model_arch_version": TCN_LSTM_ARCH_VERSION,
+        "model_arch_version": MODEL_ARCH_VERSION,
         "train_metrics": best_train_metrics,
         "val_metrics": best_val_metrics,
         "rank_metrics": best_rank_metrics,
@@ -1077,7 +1077,7 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--nhid", type=int, default=64)
-    parser.add_argument("--levels", type=int, default=DEFAULT_TCN_LEVELS)
+    parser.add_argument("--levels", type=int, default=DEFAULT_TEMPORAL_LEVELS)
     parser.add_argument("--ksize", type=int, default=7)
     parser.add_argument("--lstm_hidden", type=int, default=64)
     parser.add_argument("--lstm_layers", type=int, default=1)
@@ -1126,7 +1126,7 @@ def parse_args():
 def main():
     args = parse_args()
     if args.policy_name != "old":
-        raise ValueError("Stage-1 真实 P/Q 来自旧政策，新政策迁移不在本阶段处理")
+        raise ValueError("Stage-1 真实用户有功功率与储能充放电功率来自旧政策，新政策迁移不在本阶段处理")
     args.save_dir = str(Path(args.save_dir).expanduser().resolve())
     log_path = setup_console_logging(args)
     if args.cuda and not torch.cuda.is_available():

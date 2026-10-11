@@ -11,25 +11,25 @@ import torch
 import torch.nn.functional as F
 
 try:
-    from . import add_test_st2 as st2
-    from .model import TCN_LSTM_ARCH_VERSION
-    from .teacher_targets import (
+    from . import teacher as st2
+    from .model import MODEL_ARCH_VERSION
+    from .targets import (
         BEHAVIOR_TARGET_NAMES,
         PHYSICAL_TARGET_NAMES,
         RESPONSE_TARGET_NAMES,
         TARGET_PIPELINE_VERSION,
     )
-    from .utils import load_storage_data, scale_P
+    from .data import load_storage_data, scale_P
 except ImportError:
-    import add_test_st2 as st2
-    from model import TCN_LSTM_ARCH_VERSION
-    from teacher_targets import (
+    import teacher as st2
+    from model import MODEL_ARCH_VERSION
+    from targets import (
         BEHAVIOR_TARGET_NAMES,
         PHYSICAL_TARGET_NAMES,
         RESPONSE_TARGET_NAMES,
         TARGET_PIPELINE_VERSION,
     )
-    from utils import load_storage_data, scale_P
+    from data import load_storage_data, scale_P
 
 
 STUDENT_DATASET_VERSION = "student-distill-v2-structured-current-stage2"
@@ -79,7 +79,7 @@ def validate_teacher_checkpoint(checkpoint):
         raise RuntimeError("Stage-2 checkpoint 的教师目标版本不匹配")
     if checkpoint.get("stage2_objective_version") != st2.STAGE2_OBJECTIVE_VERSION:
         raise RuntimeError("Stage-2 checkpoint 的训练目标版本不匹配")
-    if checkpoint.get("model_arch_version") != TCN_LSTM_ARCH_VERSION:
+    if checkpoint.get("model_arch_version") != MODEL_ARCH_VERSION:
         raise RuntimeError("Stage-2 checkpoint 的网络结构版本不匹配")
     if tuple(checkpoint.get("physical_target_names", ())) != tuple(PHYSICAL_TARGET_NAMES):
         raise RuntimeError("Stage-2 physical head 语义不匹配")
@@ -402,7 +402,7 @@ def save_dataset(args, checkpoint, data, table, positive, pseudo, mismatch,
         "dp_clip_q99": float(dp_clip),
         "normalization": data["normalization"],
         "policy_note": "不输入 season；仅使用当前政策的相对电价角色与角色跳变",
-        "pseudo_note": "B=P-Q，仅用于软目标与成对排序；A类伪负不进入学生",
+        "pseudo_note": "去储能背景=用户有功功率-储能充放电功率，仅用于软目标与成对排序；A类伪负不进入学生",
         "elapsed_seconds": float(elapsed),
     }
     (output_dir / "student_dataset_summary.json").write_text(

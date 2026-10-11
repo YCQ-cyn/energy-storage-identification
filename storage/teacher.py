@@ -13,7 +13,7 @@ from pathlib import Path
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "2")
 SCRIPT_DIR = Path(__file__).resolve().parent
-PACKAGE_PARENT = SCRIPT_DIR.parents[1]
+PACKAGE_PARENT = SCRIPT_DIR.parent
 REQUIRED_STAGE1_OBJECTIVE_VERSION = (
     "joint-z-vicreg-h-vcreg-v8-batched-augment-equivalent"
 )
@@ -38,17 +38,17 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 
 try:
-    from TCN.adding_problem.model import (
-        DEFAULT_TCN_LEVELS,
-        TCN_LSTM,
-        TCN_LSTM_ARCH_VERSION,
+    from storage.model import (
+        DEFAULT_TEMPORAL_LEVELS,
+        TemporalSequenceModel,
+        MODEL_ARCH_VERSION,
     )
-    from TCN.adding_problem.policy_transfer import (
+    from storage.policy import (
         POLICY_TRANSFER_VERSION,
         PolicyTransferConfig,
         build_policy_transfer_cache,
     )
-    from TCN.adding_problem.teacher_targets import (
+    from storage.targets import (
         BEHAVIOR_TARGET_NAMES,
         PHYSICAL_TARGET_NAMES,
         RESPONSE_TARGET_NAMES,
@@ -58,19 +58,19 @@ try:
         compute_stage2_targets,
         summarize_stage2_targets,
     )
-    from TCN.adding_problem.utils import (
+    from storage.data import (
         augment_sync_intensity_torch,
         load_storage_data,
         scale_pq,
     )
 except ImportError:
-    from model import DEFAULT_TCN_LEVELS, TCN_LSTM, TCN_LSTM_ARCH_VERSION
-    from policy_transfer import (
+    from model import DEFAULT_TEMPORAL_LEVELS, TemporalSequenceModel, MODEL_ARCH_VERSION
+    from policy import (
         POLICY_TRANSFER_VERSION,
         PolicyTransferConfig,
         build_policy_transfer_cache,
     )
-    from teacher_targets import (
+    from targets import (
         BEHAVIOR_TARGET_NAMES,
         PHYSICAL_TARGET_NAMES,
         RESPONSE_TARGET_NAMES,
@@ -80,7 +80,7 @@ except ImportError:
         compute_stage2_targets,
         summarize_stage2_targets,
     )
-    from utils import augment_sync_intensity_torch, load_storage_data, scale_pq
+    from data import augment_sync_intensity_torch, load_storage_data, scale_pq
 
 class ConsoleTee:
     def __init__(self, stream, log_file):
@@ -211,7 +211,7 @@ class EncoderWithHead(nn.Module):
                  lstm_layers, embedding_dim, proj_dim=128):
         super().__init__()
         self.input_channels = int(input_channels)
-        self.backbone = TCN_LSTM(
+        self.backbone = TemporalSequenceModel(
             input_channels=input_channels,
             num_channels=[nhid] * levels,
             kernel_size=ksize,
@@ -1207,7 +1207,7 @@ def build_dataloaders_st2(args):
         policy_name=args.policy_name,
     )
     if args.policy_name != "old":
-        raise ValueError("Stage-2 真实 P/Q 必须按旧政策读取，迁移样本由同步重构生成")
+        raise ValueError("Stage-2 真实用户有功功率与储能充放电功率必须按旧政策读取，迁移样本由同步重构生成")
 
     target_config = TeacherTargetConfig(
         activity_ratio=args.activity_ratio,
@@ -1418,9 +1418,9 @@ def build_dataloaders_st2(args):
         "user_balance": "sqrt sampler × sqrt loss weight",
         "physical_policy_input": "season_flag, price_role_seq and price_role_jump masked to zero",
         "behavior_policy_input": "season_flag masked; relative price role and role jump retained",
-        "policy_transfer": "B=P-Q; relocate Q segments; P_syn=B+Q_syn; normalize jointly",
-        "pseudo_a": "Q shift/sign mismatch for teacher ranking only",
-        "p_attenuation": "B=P-Q; attenuate only P response while retaining full Q",
+        "policy_transfer": "background = customer active power - storage charging and discharging power; relocate storage segments; synthetic active power = background + synthetic storage power; normalize jointly",
+        "pseudo_a": "storage charging and discharging power shift/sign mismatch for teacher ranking only",
+        "p_attenuation": "background = customer active power - storage charging and discharging power; attenuate the active-power response while retaining full storage power",
     }
     return train_loader, val_loader, data_info
 
@@ -1445,10 +1445,10 @@ def load_stage1_model(model, checkpoint_path, device):
         raise FileNotFoundError(f"Stage-1 checkpoint 不存在：{checkpoint_path}")
     checkpoint = load_torch_checkpoint(checkpoint_path, map_location=device)
     architecture_version = checkpoint.get("model_arch_version")
-    if architecture_version != TCN_LSTM_ARCH_VERSION:
+    if architecture_version != MODEL_ARCH_VERSION:
         raise RuntimeError(
             "Stage-1 checkpoint 架构不兼容，请使用当前代码重新训练 Stage-1："
-            f"{architecture_version!r} != {TCN_LSTM_ARCH_VERSION!r}"
+            f"{architecture_version!r} != {MODEL_ARCH_VERSION!r}"
         )
     objective_version = checkpoint.get("objective_version")
     if objective_version != REQUIRED_STAGE1_OBJECTIVE_VERSION:
@@ -1741,7 +1741,7 @@ def encode_stage2_views(
         }
         if len(attenuation_index) > 0:
             if "frozen_p_attenuation_embedding" not in batch:
-                raise RuntimeError("冻结视图缓存缺少 P 响应衰减特征")
+                raise RuntimeError("冻结视图缓存缺少用户有功功率响应衰减特征")
             attenuation_embedding = batch[
                 "frozen_p_attenuation_embedding"
             ][attenuation_index]
@@ -2307,7 +2307,7 @@ def save_checkpoint(path, model, args, model_kwargs, data_info, epoch, score, me
         "model_state_dict": model.state_dict(),
         "args": vars(args),
         "model_kwargs": model_kwargs,
-        "model_arch_version": TCN_LSTM_ARCH_VERSION,
+        "model_arch_version": MODEL_ARCH_VERSION,
         "data_info": data_info,
         "epoch": int(epoch),
         "best_epoch": int(epoch),
@@ -2426,9 +2426,9 @@ def print_detailed_metrics(epoch, metrics):
     )
     print(
         f"[ValCoreCorr] epoch={epoch} | pred/target "
-        f"P-R={metrics['core_pred_corr_physical_response']:.3f}/"
+        f"有功功率响应相关性={metrics['core_pred_corr_physical_response']:.3f}/"
         f"{metrics['core_target_corr_physical_response']:.3f} | "
-        f"P-B={metrics['core_pred_corr_physical_behavior']:.3f}/"
+        f"储能行为相关性={metrics['core_pred_corr_physical_behavior']:.3f}/"
         f"{metrics['core_target_corr_physical_behavior']:.3f} | "
         f"R-B={metrics['core_pred_corr_response_behavior']:.3f}/"
         f"{metrics['core_target_corr_response_behavior']:.3f} | "
@@ -2515,12 +2515,12 @@ def save_training_summary(path, data_info, best_epoch, best_score, best_metrics)
             warnings.append(f"{display_name}分数下降偏低：{score_drop:.4f}")
     if best_metrics["p_attenuation_pair_accuracy"] < 0.80:
         warnings.append(
-            "P 响应衰减反事实排序偏弱："
+            "用户有功功率响应衰减反事实排序偏弱："
             f"{best_metrics['p_attenuation_pair_accuracy']:.3f}"
         )
     if best_metrics["p_attenuation_score_drop"] < 0.005:
         warnings.append(
-            "P 响应衰减后的核心分数下降偏低："
+            "用户有功功率响应衰减后的核心分数下降偏低："
             f"{best_metrics['p_attenuation_score_drop']:.4f}"
         )
     if best_metrics["p_attenuation_margin_accuracy"] < 0.65:
@@ -2803,7 +2803,7 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--nhid", type=int, default=64)
-    parser.add_argument("--levels", type=int, default=DEFAULT_TCN_LEVELS)
+    parser.add_argument("--levels", type=int, default=DEFAULT_TEMPORAL_LEVELS)
     parser.add_argument("--ksize", type=int, default=7)
     parser.add_argument("--dropout", type=float, default=0.2)
     parser.add_argument("--lstm_hidden", type=int, default=64)

@@ -77,7 +77,7 @@ def _validate_curves(p_raw, q_raw, price_role_seq=None):
     if q_raw.shape != p_raw.shape:
         raise ValueError(f"Q_raw 与 P_raw 形状不一致：{q_raw.shape} != {p_raw.shape}")
     if not np.isfinite(p_raw).all() or not np.isfinite(q_raw).all():
-        raise ValueError("原始 P/Q 中存在非有限值")
+        raise ValueError("原始 用户有功功率与储能充放电功率 中存在非有限值")
 
     if price_role_seq is None:
         return p_raw, q_raw, None

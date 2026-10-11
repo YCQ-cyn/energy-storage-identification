@@ -97,7 +97,7 @@ def scale_Q(x, q=Q_GLOBAL_QUANTILE, eps=1e-6, p_ref=None,
         ref = float(p_ref) * q_global_scale
         clip_abs = Q_CLIP_ABS if clip_abs is None else float(clip_abs)
         if ref < eps:
-            raise ValueError("P 参考值与 Q 全局尺度的乘积必须为正数")
+            raise ValueError("用户有功功率参考值与储能充放电功率全局尺度的乘积必须为正数")
 
     return np.clip(values / ref, -clip_abs, clip_abs).astype(np.float32)
 
@@ -122,12 +122,12 @@ def fit_q_global_scale(P, Q, indices=None, p_quantile=P_SCALE_QUANTILE,
     P_values = _as_finite_float_array(P, "P")
     Q_values = _as_finite_float_array(Q, "Q")
     if P_values.shape != Q_values.shape or P_values.ndim != 2:
-        raise ValueError("P、Q 必须是形状一致的二维曲线矩阵")
+        raise ValueError("用户有功功率、储能充放电功率必须是形状一致的二维曲线矩阵")
 
     if indices is not None:
         selected = np.asarray(indices, dtype=np.int64)
         if selected.size == 0:
-            raise ValueError("训练集为空，无法拟合 Q 全局尺度")
+            raise ValueError("训练集为空，无法拟合储能充放电功率全局尺度")
         P_values = P_values[selected]
         Q_values = Q_values[selected]
 
@@ -191,7 +191,7 @@ def augment_sync_intensity_torch(inputs, scale_min=0.9, scale_max=1.1,
                                  smooth_prob=0.7, smooth_window=4,
                                  noise_std=0.01):
     if inputs.ndim != 3 or inputs.size(1) < 2:
-        raise ValueError("批量增强输入应为 B×C×T，且至少包含 P/Q 两个通道")
+        raise ValueError("批量增强输入应为 B×C×T，且至少包含 用户有功功率与储能充放电功率 两个通道")
 
     output = inputs.clone()
     pq = output[:, :2, :]
@@ -615,7 +615,7 @@ def make_pseudo_negative_sample_typeA(x, pool_same_group=None):
 def make_pseudo_negative_sample_typeB(x, pool_same_group=None, P_raw=None, Q_raw=None):
     P, Q, season_flag, price_role_seq, price_role_jump = [x[i].copy() for i in range(5)]
     if P_raw is None or Q_raw is None:
-        raise ValueError("B 类伪负样本必须基于原始 P、Q 构造")
+        raise ValueError("B 类伪负样本必须基于原始用户有功功率、储能充放电功率构造")
 
     P_neg = scale_P(np.asarray(P_raw, dtype=np.float32) - np.asarray(Q_raw, dtype=np.float32))
     P_neg = smooth(P_neg, window_size=4)
@@ -842,7 +842,7 @@ def load_storage_data(data_path="processed_result.xlsx", train_ratio=0.9, time_t
     if np.any(p_raw < -1e-6):
         row_index, point_index = np.argwhere(p_raw < -1e-6)[0]
         raise ValueError(
-            f"筛选后的 P 仍包含负值: source_row={int(df.iloc[row_index]['_source_row'])}, "
+            f"筛选后的用户有功功率仍包含负值: source_row={int(df.iloc[row_index]['_source_row'])}, "
             f"column={p_columns[point_index]}"
         )
 

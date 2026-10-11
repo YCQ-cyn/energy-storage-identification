@@ -9,13 +9,13 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.preprocessing import StandardScaler
 
 try:
-    from TCN.adding_problem.add_test_st1 import EncoderWithHead, _spectrum_stats, set_seed
-    from TCN.adding_problem.teacher_targets import FixedQuantileScaler, compute_physical_components
-    from TCN.adding_problem.utils import load_storage_data
+    from storage.stage1 import EncoderWithHead, _spectrum_stats, set_seed
+    from storage.targets import FixedQuantileScaler, compute_physical_components
+    from storage.data import load_storage_data
 except ModuleNotFoundError:
-    from add_test_st1 import EncoderWithHead, _spectrum_stats, set_seed
-    from teacher_targets import FixedQuantileScaler, compute_physical_components
-    from utils import load_storage_data
+    from stage1 import EncoderWithHead, _spectrum_stats, set_seed
+    from targets import FixedQuantileScaler, compute_physical_components
+    from data import load_storage_data
 
 
 PROBE_TARGETS = (
@@ -254,7 +254,7 @@ def main():
     )
     print(f"物理探针平均 R2 差值（训练-随机，仅诊断）：{probe_delta:+.4f}")
     print(
-        f"P/Q 曲线重建 R2（仅诊断）：训练={trained_curve_r2:+.4f} | "
+        f"用户有功功率与储能充放电功率 曲线重建 R2（仅诊断）：训练={trained_curve_r2:+.4f} | "
         f"随机={random_curve_r2:+.4f}"
     )
     print(f"核心验收项：{core_checks}")
